@@ -8,6 +8,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 from dotenv import load_dotenv 
+from StudentClass import StudentClass
+from StudentClass import Assignment
 
 # Load environment variables
 load_dotenv()
@@ -46,9 +48,12 @@ try:
     # Find all elements with class 'ic-DashboardCard__header_hero' (These are the class cards)
     soup = BeautifulSoup(driver.page_source, 'html.parser')
     class_elements = soup.find_all('div', class_='ic-DashboardCard__header_content')
+
+    # Create array of student classes
+    student_classes = []
     
     # Get name for each class you have
-    def getClassName():
+    def storeClassName():
       for class_element in class_elements:
         # Find the h3 tag inside the current div element
         h3_tag = class_element.find('h3', class_='ic-DashboardCard__header-title')
@@ -57,10 +62,19 @@ try:
         if h3_tag:
             # Extract the title attribute from the h3 tag
             class_name = h3_tag.get('title', '')
-            print(class_name)
+            student_class = StudentClass(class_name)
+            student_classes.append(student_class)
         else:
             print("No classes found")
+    storeClassName()
+
+    # Print classes user is in 
+    def printUserClasses():
+        for student_class in student_classes:
+            print(student_class.class_name)
       
+    printUserClasses()
+
 
 finally:
     # Close the browser session

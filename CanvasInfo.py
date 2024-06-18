@@ -1,4 +1,5 @@
 import os
+from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium import webdriver
@@ -12,7 +13,6 @@ from dotenv import load_dotenv
 load_dotenv()
 username = os.getenv("USERNAME_CANVAS")
 password = os.getenv("PASSWORD_CANVAS")
-print(username)
 
 # Set up the WebDriver
 driver = webdriver.Chrome(service=Service('chromedriver.exe'))
@@ -41,16 +41,26 @@ try:
         print("Login successful. Proceeding...")
 
     # Wait until the new page loads by waiting for a specific element
-    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "ic-DashboardCard__header_hero")))
+    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "ic-DashboardCard")))
 
-    # Find all elements with class 'ic-DashboardCard__header_hero'
-    class_elements = driver.find_elements(By.CLASS_NAME, "ic-DashboardCard__header_hero")
-
-    # Create an array of these elements
-    classes = [element.get_attribute('outerHTML') for element in class_elements]
-
-    # Print the array of classes (just for demonstration)
-    print(classes)
+    # Find all elements with class 'ic-DashboardCard__header_hero' (These are the class cards)
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    class_elements = soup.find_all('div', class_='ic-DashboardCard__header_content')
+    
+    # Get name for each class you have
+    def getClassName():
+      for class_element in class_elements:
+        # Find the h3 tag inside the current div element
+        h3_tag = class_element.find('h3', class_='ic-DashboardCard__header-title')
+        
+        # Check if h3_tag is found
+        if h3_tag:
+            # Extract the title attribute from the h3 tag
+            class_name = h3_tag.get('title', '')
+            print(class_name)
+        else:
+            print("No classes found")
+      
 
 finally:
     # Close the browser session

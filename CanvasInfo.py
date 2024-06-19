@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv 
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
@@ -7,7 +8,6 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
-from dotenv import load_dotenv 
 from StudentClass import StudentClass
 from StudentClass import Assignment
 
@@ -62,6 +62,8 @@ try:
         if h3_tag:
             # Extract the title attribute from the h3 tag
             class_name = h3_tag.get('title', '')
+            class_name = class_name.split(' ', 1)
+            class_name = class_name[1]
             student_class = StudentClass(class_name)
             student_classes.append(student_class)
         else:
@@ -72,8 +74,9 @@ try:
     def printUserClasses():
         for student_class in student_classes:
             print(student_class.class_name)
-      
+            
     printUserClasses()
+
 
 
 finally:

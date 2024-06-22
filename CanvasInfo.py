@@ -52,6 +52,8 @@ try:
     student_classes = []
     
     def store_class_names():
+        global class_elements
+        
         for class_element in class_elements:
             # Find the h3 tag inside the current div element
             h3_tag = class_element.find('h3', class_='ic-DashboardCard__header-title')

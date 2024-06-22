@@ -52,7 +52,7 @@ try:
     student_classes = []
     
     def store_class_names():
-        global class_elements
+        class_elements = soup.find_all('div', class_='ic-DashboardCard__header_content')
         
         for class_element in class_elements:
             # Find the h3 tag inside the current div element
@@ -67,7 +67,7 @@ try:
                 print(f"Class found: {class_name}")
 
                 # Click the h3 tag to navigate to the class page
-                h3_element = driver.find_element(By.XPATH, f"//h3[@title='{h3_tag.get('title', '')}']")
+                h3_element = wait.until(EC.presence_of_element_located((By.XPATH, f"//h3[@title='{h3_tag.get('title', '')}']")))
                 h3_element.click()
 
                 # Wait for the page to load
@@ -85,11 +85,6 @@ try:
                 # Navigate back to the dashboard and refresh the class_elements
                 driver.back()
                 driver.back()
-                
-                wait.until(EC.presence_of_element_located((By.CLASS_NAME, "ic-DashboardCard")))
-                soup = BeautifulSoup(driver.page_source, 'html.parser')
-                class_elements = soup.find_all('div', class_='ic-DashboardCard__header_content')
-
         else:
             print("No classes found")
 

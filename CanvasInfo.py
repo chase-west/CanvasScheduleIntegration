@@ -55,7 +55,8 @@ def get_classes():
 
     for course in courses_data:
         class_name = course.get('short_name') or course.get('name', 'No Name')
-        class_url = f"https://tmcc.instructure.com/courses/{course['id']}"
+        class_id = course.get('id')
+        class_url = f"https://tmcc.instructure.com/courses/{class_id}"
         student_class = StudentClass(class_name)
         student_classes.append(student_class)
         print(f"Class found: {class_name}")

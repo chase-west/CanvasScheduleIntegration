@@ -83,7 +83,7 @@ def get_classes():
 
 def get_assignments(student_class, class_url):
     global session
-    assignments_url = class_url + '/assignments'
+    assignments_url = class_url + '/assignments?per_page=100'
     
     try:
         response = session.get(assignments_url)

@@ -1,13 +1,8 @@
 import os
-from dotenv import load_dotenv 
+import requests
 from bs4 import BeautifulSoup
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.service import Service
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from dotenv import load_dotenv
+import json
 from StudentClass import StudentClass, Assignment
 
 # Load environment variables
@@ -15,116 +10,89 @@ load_dotenv()
 username = os.getenv("USERNAME_CANVAS")
 password = os.getenv("PASSWORD_CANVAS")
 
-# Set up the WebDriver
-driver = webdriver.Chrome(service=Service('chromedriver.exe'))
+# Start a session
+session = requests.Session()
 
-try:
-    # Open Canvas webpage
-    driver.get("https://tmcc.instructure.com/")
-
-    # Wait for username and password elements to appear
-    wait = WebDriverWait(driver, 10)
-    username_element = wait.until(EC.presence_of_element_located((By.ID, "pseudonym_session_unique_id")))
-    password_element = wait.until(EC.presence_of_element_located((By.ID, "pseudonym_session_password")))
-
-    # Input username and password
-    username_element.send_keys(username)
-    password_element.send_keys(password)
-    password_element.send_keys(Keys.RETURN)
-
-    try:
-        # Wait for error element (if login fails)
-        error_element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.ic-flash__icon > i.icon-warning")))
-        raise Exception("Error: Login failed or warning icon detected.")
-
-    except TimeoutException:
-        # If no error element found, proceed
-        print("Login successful. Proceeding...")
-
-    # Wait until the new page loads by waiting for a specific element
-    wait.until(EC.presence_of_element_located((By.CLASS_NAME, "ic-DashboardCard")))
-
-    # Find all elements with class 'ic-DashboardCard__header_hero' (These are the class cards)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    class_elements = soup.find_all('div', class_='ic-DashboardCard__header_content')
-
-    # Create array of student classes
-    student_classes = []
+def login_to_canvas():
+    login_url = "https://tmcc.instructure.com/login/canvas"
     
-    def store_class_names():
-        class_elements = soup.find_all('div', class_='ic-DashboardCard__header_content')
+    # Fetch the login page to get any hidden fields
+    login_page = session.get(login_url)
+    soup = BeautifulSoup(login_page.text, 'html.parser')
+    
+    # Extract hidden fields
+    hidden_inputs = soup.find_all("input", type="hidden")
+    payload = {
+        'pseudonym_session[unique_id]': username,
+        'pseudonym_session[password]': password
+    }
+    
+    # Add hidden fields to payload
+    for hidden_input in hidden_inputs:
+        payload[hidden_input['name']] = hidden_input['value']
+    
+    # Set headers (if necessary)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+    
+    response = session.post(login_url, data=payload, headers=headers)
+    
+    if "Invalid" in response.text or response.url == login_url:
+        raise Exception("Login failed")
+    else:
+        print("Login successful")
+
+def get_classes():
+    dashboard_url = "https://tmcc.instructure.com/api/v1/users/self/favorites/courses"
+    response = session.get(dashboard_url)
+    courses_data = json.loads(response.text)
+    student_classes = []
+
+    if not courses_data:
+        print("No classes found or unable to locate classes.")
+        return student_classes
+
+    for course in courses_data:
+        class_name = course.get('short_name') or course.get('name', 'No Name')
+        class_url = f"https://tmcc.instructure.com/courses/{course['id']}"
+        student_class = StudentClass(class_name)
+        student_classes.append(student_class)
+        print(f"Class found: {class_name}")
+        get_assignments(student_class, class_url)
         
-        for class_element in class_elements:
-            # Find the h3 tag inside the current div element
-            h3_tag = class_element.find('h3', class_='ic-DashboardCard__header-title')
+    return student_classes
 
-            # Check if h3_tag is found
-            if h3_tag:
-                # Extract the title attribute from the h3 tag
-                class_name = h3_tag.get('title', '').split(' ', 1)[1]
-                student_class = StudentClass(class_name)
-                student_classes.append(student_class)
-                print(f"Class found: {class_name}")
+def get_assignments(student_class, class_url):
+    assignments_url = class_url + '/assignments'
+    response = session.get(assignments_url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    assignments = soup.find_all('div', class_='ig-row__layout')
 
-                # Click the h3 tag to navigate to the class page
-                h3_element = wait.until(EC.presence_of_element_located((By.XPATH, f"//h3[@title='{h3_tag.get('title', '')}']")))
-                h3_element.click()
+    if not assignments:
+        print(f"No assignments found for class: {student_class.class_name}")
 
-                # Wait for the page to load
-                wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'assignments')))
+    for assignment_element in assignments:
+        assignment_name_element = assignment_element.find('a', class_='ig-title')
+        assignment_name = assignment_name_element.get_text(strip=True) if assignment_name_element else 'No title'
+        
+        due_date_element = assignment_element.find('div', class_='assignment-date-due')
+        assignment_due_date = due_date_element.find('span', {'aria-hidden': 'true'}).get_text(strip=True) if due_date_element else 'No due date'
+        
+        assignment = Assignment(name=assignment_name, due_date=assignment_due_date)
+        student_class.assignments.append(assignment)
+        print(f"Assignment found: {assignment_name}, Due: {assignment_due_date}")
 
-                # Click on the assignments tab
-                assignments_tab = driver.find_element(By.CSS_SELECTOR, 'a.assignments')
-                assignments_tab.click()
+def main():
+    login_to_canvas()
+    student_classes = get_classes()
+    print_user_classes(student_classes)
 
-                # Wait for the assignments page to load
-                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.ig-row__layout')))
+def print_user_classes(student_classes):
+    for student_class in student_classes:
+        print(student_class.class_name)
+        for assignment in student_class.assignments:
+            print(f" - {assignment.name}, Due: {assignment.due_date}")
 
-                store_user_assignments(student_class)
-                
-                # Navigate back to the dashboard and refresh the class_elements
-                driver.back()
-                driver.back()
-        else:
-            print("No classes found")
-
-    def store_user_assignments(student_class):
-        assignments_tab = driver.find_element(By.CSS_SELECTOR, 'a.assignments')
-        assignments_tab.click()
-
-        # Parse the assignments page source with BeautifulSoup
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        assignments = soup.find_all('div', class_='ig-row__layout')
-
-        if assignments:
-            for assignment_element in assignments:
-                # Get the assignment name
-                assignment_name_element = assignment_element.find('a', class_='ig-title')
-                assignment_name = assignment_name_element.get_text(strip=True) if assignment_name_element else 'No title'
-
-                # Get the due date
-                due_date_element = assignment_element.find('div', class_='assignment-date-due')
-                if due_date_element:
-                    assignment_due_date = due_date_element.find('span', {'aria-hidden': 'true'}).get_text(strip=True)
-                else:
-                    assignment_due_date = 'No due date'
-
-                # Create and append the assignment object
-                assignment = Assignment(name=assignment_name, due_date=assignment_due_date)
-                student_class.assignments.append(assignment)
-                print(f"Assignment found: {assignment_name}, Due: {assignment_due_date}")
-        else:
-            print("No assignments found")
-
-
-    store_class_names()
-
-                              
-    # Print classes user is in 
-    def printUserClasses():
-        for student_class in student_classes:
-            print(student_class.class_name)
-
-finally:
-    # Close the browser session
-    driver.quit()
+if __name__ == "__main__":
+    main()

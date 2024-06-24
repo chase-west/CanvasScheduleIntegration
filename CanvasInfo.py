@@ -1,5 +1,5 @@
 import os
-from requests_html import HTMLSession
+import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import json
@@ -11,7 +11,7 @@ username = os.getenv("USERNAME_CANVAS")
 password = os.getenv("PASSWORD_CANVAS")
 
 # Global session object
-session = HTMLSession()
+session = requests.Session()
 
 def login_to_canvas():
     global session

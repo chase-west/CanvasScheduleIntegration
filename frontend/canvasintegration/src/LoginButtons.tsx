@@ -2,11 +2,11 @@ import React from 'react';
 
 const LoginButtons: React.FC = () => {
   const loginMicrosoft = () => {
-    window.location.href = "http://localhost:5000/login/microsoft";
+    window.location.href = "https://localhost:5000/login/microsoft";
   };
 
   const loginGoogle = () => {
-    window.location.href = "http://localhost:5000/login/google";
+    window.location.href = "https://localhost:5000/login/google";
   };
 
   return (

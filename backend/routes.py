@@ -3,7 +3,7 @@ from requests_oauthlib import OAuth2Session
 import os
 from dotenv import load_dotenv
 import requests
-
+from flask import jsonify
 
 load_dotenv()
 
@@ -22,6 +22,17 @@ google_authorization_base_url = "https://accounts.google.com/o/oauth2/auth"
 google_token_url = "https://oauth2.googleapis.com/token"
 
 def init_routes(app):
+
+    @app.route('/api/login/canvas', methods=['POST'])
+    def login_to_canvas():
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        if email == 'demo@example.com' and password == 'password':
+            return jsonify({'message': 'Login successful'}), 200
+        else:
+            return jsonify({'message': 'Invalid credentials'}), 401
+        
     @app.route("/login/microsoft")
     def login_microsoft():
         microsoft = OAuth2Session(microsoft_client_id, redirect_uri=microsoft_redirect_uri, scope=["Tasks.ReadWrite"])

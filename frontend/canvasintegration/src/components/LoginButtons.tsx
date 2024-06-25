@@ -10,9 +10,9 @@ const LoginButtons: React.FC = () => {
   };
 
   return (
-    <div>
-      <button onClick={loginMicrosoft}>Login with Microsoft</button>
-      <button onClick={loginGoogle}>Login with Google</button>
+    <div className="btn-group" role="group" aria-label="Login Buttons">
+      <button type="button" className="btn btn-primary" onClick={loginMicrosoft}>Login with Microsoft</button>
+      <button type="button" className="btn btn-danger" onClick={loginGoogle}>Login with Google</button>
     </div>
   );
 };

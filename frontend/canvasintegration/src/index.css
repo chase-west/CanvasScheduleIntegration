@@ -1,0 +1,17 @@
+body {
+  background-color: #f8f9fa;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+}
+
+.footer {
+  text-align: center;
+}

@@ -1,31 +1,23 @@
-import React, { useState } from 'react';
-import CanvasLoginForm from './CanvasLoginForm';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import LoginButtons from './LoginButtons';
 
 const HomePage: React.FC = () => {
-  const [isLoggedInToCanvas, setIsLoggedInToCanvas] = useState(false);
+  const navigate = useNavigate();
 
-  // Function to handle successful Canvas login
-  const handleCanvasLogin = (credentials: { username: string, password: string }) => {
-    // Assuming a simple validation for demonstration
-    if (credentials.username === 'demo' && credentials.password === 'password') {
-      setIsLoggedInToCanvas(true);
-    } else {
-      alert('Invalid credentials. Please try again.');
-    }
+  const handleLoginClick = () => {
+    navigate('/login');
   };
 
   return (
-    <div className="container mt-4">
-      <h1>Welcome to OAuth2 Integration</h1>
-      {!isLoggedInToCanvas ? (
-        <CanvasLoginForm onLogin={handleCanvasLogin} />
-      ) : (
-        <>
-          <p>You are logged in to Canvas.</p>
-          <LoginButtons />
-        </>
-      )}
+    <div className="jumbotron">
+      <div className="container">
+        <h1 className="display-4">Welcome to Canvas Integration</h1>
+        <p className="lead">Our website helps sync your canvas assignments across multiple calender and to do services.</p>
+        <hr className="my-4" />
+        <button onClick={handleLoginClick}>Log in to canvas</button>
+        <LoginButtons />
+      </div>
     </div>
   );
 };

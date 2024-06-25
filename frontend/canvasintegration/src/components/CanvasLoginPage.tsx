@@ -1,20 +1,22 @@
-// CanvasLoginForm.tsx
 import React, { useState } from 'react';
-import { loginToCanvas } from '../api/api'; 
+import { useNavigate } from 'react-router-dom';
+import { loginToCanvas } from '../api/api';
 
 const CanvasLoginForm: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const response = await loginToCanvas({ email, password });
-      console.log(response); // Handle success (e.g., navigate to next page)
+      console.log(response);
       setError(null);
-    } catch (error : any) {
-      setError(error.message); // Handle error (e.g., display error message)
+      navigate('/dashboard');
+    } catch (error: any) {
+      setError(error.message);
     }
   };
 

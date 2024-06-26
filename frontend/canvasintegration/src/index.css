@@ -22,6 +22,7 @@ body {
 
 .btn {
   display: block;
+  margin-right: 0.3em;
 }
 
 .alert {

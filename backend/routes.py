@@ -47,7 +47,7 @@ def init_routes(app):
             # Store hashed password in your database along with other user data
             user = supabase.table('users').insert({'website_email': website_email, 'website_password': hashed_password.decode('utf-8')}).execute()
             
-            session['user'] = website_email
+            session['user_id'] = user.data[0]['id']  # Store user ID in session for future use maybe
 
             return jsonify({'message': 'User registered successfully'}), 201
         except Exception as e:
@@ -67,7 +67,7 @@ def init_routes(app):
                 stored_password = user.data[0]['website_password'].encode('utf-8')
                 # Check if entered password matches stored hashed password
                 if bcrypt.checkpw(website_password.encode('utf-8'), stored_password):
-                    session['user'] = website_email
+                    session['user_id'] = user.data[0]['id']  # Store user ID in session for future use maybe
                     return jsonify({'message': 'Login successful'}), 200
                 else:
                     return jsonify({'error': 'Invalid credentials'}), 401

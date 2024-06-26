@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api/api'; 
+import { login } from '../api/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { useAuth } from '../context/AuthContext';
 
-const WebsiteLoginPage = () => {
+const WebsiteLoginPage: React.FC = () => {
     const navigate = useNavigate();
+    const { login: authLogin } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState('');
 
-    const handleLogin = async (e : any) => {
+    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         try {
-            const response = await login({ email, password });  
-            console.log(response);
+            const response = await login({ email, password });
+            authLogin(response.token); 
             setLoginError('');
             navigate('/dashboard');
         } catch (error) {

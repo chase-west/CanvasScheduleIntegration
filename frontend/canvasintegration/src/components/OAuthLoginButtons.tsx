@@ -12,7 +12,7 @@ const OAuthLoginButtons: React.FC = () => {
   return (
     <div className="btn-group" role="group" aria-label="Login Buttons">
       <button type="button" className="btn btn-primary" onClick={loginMicrosoft}>Login with Microsoft</button>
-      <button type="button" className="btn btn-danger" onClick={loginGoogle}>Login with Google</button>
+      <button type="button" className="btn btn-dark" onClick={loginGoogle}>Login with Google</button>
     </div>
   );
 };

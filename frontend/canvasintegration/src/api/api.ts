@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const baseURL = 'https://localhost:5000';
 

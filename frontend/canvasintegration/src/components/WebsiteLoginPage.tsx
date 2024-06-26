@@ -16,6 +16,7 @@ const WebsiteLoginPage = () => {
             const response = await login({ email, password });  
             console.log(response);
             setLoginError('');
+            navigate('/dashboard');
         } catch (error) {
             console.error('Error logging in:', error);
             setLoginError('Invalid credentials. Please try again.');

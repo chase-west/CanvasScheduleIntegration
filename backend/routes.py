@@ -46,6 +46,9 @@ def init_routes(app):
 
             # Store hashed password in your database along with other user data
             user = supabase.table('users').insert({'website_email': website_email, 'website_password': hashed_password.decode('utf-8')}).execute()
+            
+            session['user'] = website_email
+
             return jsonify({'message': 'User registered successfully'}), 201
         except Exception as e:
             return jsonify({'error': str(e)}), 400

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { signUp } from '../api/api'; 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const WebsiteSignupPage = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupError, setSignupError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false); // State to track form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSignup = async (e : any) => {
     e.preventDefault();
@@ -17,19 +19,17 @@ const WebsiteSignupPage = () => {
       return;
     }
 
-    // Disable submit button to prevent multiple submissions
     setIsSubmitting(true);
-
     try {
       const response = await signUp({ email, password });
       console.log(response);
-      // Handle successful sign-up
       setSignupError('');
-    } catch (error) {
+      setIsSubmitting(false);
+      // Redirect to the home page or any other page after successful signup
+      navigate('/dashboard');
+    } catch (error : any) {
       console.error('Error signing up:', error);
-      setSignupError('Error signing up. Please try again.');
-    } finally {
-      // Enable submit button after form submission completes
+      setSignupError(error.error || 'Error signing up. Please try again.');
       setIsSubmitting(false);
     }
   };
@@ -51,6 +51,7 @@ const WebsiteSignupPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="form-group">
@@ -63,6 +64,7 @@ const WebsiteSignupPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </div>
             <div className="form-group">
@@ -75,6 +77,7 @@ const WebsiteSignupPage = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                disabled={isSubmitting}
               />
             </div>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>

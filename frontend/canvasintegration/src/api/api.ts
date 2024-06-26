@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 
-const baseURL = 'https://localhost:5000'; // Update with your Flask backend URL
+const baseURL = 'https://localhost:5000';
 
 // Create an Axios instance with a base URL
 const api: AxiosInstance = axios.create({
@@ -35,6 +35,40 @@ export const loginToCanvas = async (credentials: { email: string; password: stri
       throw 'No response received from server.';
     } else {
       // Something happened in setting up the request that triggered an Error
+      throw 'Error setting up the request.';
+    }
+  }
+};
+
+// Function to handle user sign-up
+export const signUp = async (userData: { email: string; password: string }) => {
+  try {
+    const response = await api.post('/api/signup', userData);
+    return response.data;
+  } catch (error : any) {
+    // Handle specific errors if necessary
+    if (error.response) {
+      throw error.response.data;
+    } else if (error.request) {
+      throw 'No response received from server.';
+    } else {
+      throw 'Error setting up the request.';
+    }
+  }
+};
+
+// Function to handle user login
+export const login = async (credentials: { email: string; password: any }) => {
+  try {
+    const response = await api.post('/api/login', credentials);
+    return response.data;
+  } catch (error : any) {
+    // Handle specific errors if necessary
+    if (error.response) {
+      throw error.response.data;
+    } else if (error.request) {
+      throw 'No response received from server.';
+    } else {
       throw 'Error setting up the request.';
     }
   }

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LoginButtons: React.FC = () => {
+const OAuthLoginButtons: React.FC = () => {
   const loginMicrosoft = () => {
     window.location.href = "https://localhost:5000/login/microsoft";
   };
@@ -17,4 +17,4 @@ const LoginButtons: React.FC = () => {
   );
 };
 
-export default LoginButtons;
+export default OAuthLoginButtons;

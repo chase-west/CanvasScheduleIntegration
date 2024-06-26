@@ -1,11 +1,17 @@
 from flask import Flask, request, redirect, url_for, session, render_template_string
 from requests_oauthlib import OAuth2Session
 import os
+import bcrypt
+from supabase import create_client, Client
 from dotenv import load_dotenv
 import requests
 from flask import jsonify
 
 load_dotenv()
+
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
 
 # Environment variables
 microsoft_client_id = os.getenv("MICROSOFT_CLIENT_ID")
@@ -22,6 +28,50 @@ google_authorization_base_url = "https://accounts.google.com/o/oauth2/auth"
 google_token_url = "https://oauth2.googleapis.com/token"
 
 def init_routes(app):
+    
+    @app.route('/api/signup', methods=['POST'])
+    def signup():
+        data = request.json
+        website_email = data.get('email')
+        website_password = data.get('password')
+
+        try:
+            # Check if user already exists
+            existing_user = supabase.table('users').select('id').eq('website_email', website_email).execute()
+            if existing_user.data:
+                return jsonify({'error': 'User already exists'}), 400
+
+            # Hash the password before storing
+            hashed_password = bcrypt.hashpw(website_password.encode('utf-8'), bcrypt.gensalt())
+
+            # Store hashed password in your database along with other user data
+            user = supabase.table('users').insert({'website_email': website_email, 'website_password': hashed_password.decode('utf-8')}).execute()
+            return jsonify({'message': 'User registered successfully'}), 201
+        except Exception as e:
+            return jsonify({'error': str(e)}), 400
+
+    @app.route('/api/login', methods=['POST'])
+    def login():
+        data = request.json
+        website_email = data.get('email')
+        website_password = data.get('password')
+
+        try:
+            # Retrieve user record from database
+            user = supabase.table('users').select('*').eq('website_email', website_email).execute()
+
+            if len(user.data) == 1:
+                stored_password = user.data[0]['website_password'].encode('utf-8')
+                # Check if entered password matches stored hashed password
+                if bcrypt.checkpw(website_password.encode('utf-8'), stored_password):
+                    session['user'] = website_email
+                    return jsonify({'message': 'Login successful'}), 200
+                else:
+                    return jsonify({'error': 'Invalid credentials'}), 401
+            else:
+                return jsonify({'error': 'User not found'}), 404
+        except Exception as e:
+            return jsonify({'Error during login': str(e)}), 500
 
     @app.route('/api/login/canvas', methods=['POST'])
     def login_to_canvas():

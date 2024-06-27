@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { loginToCanvas } from '../api/api';
 
 const CanvasLoginForm: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ const CanvasLoginForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const response = await loginToCanvas({ email, password });
+      const response = await loginToCanvas({ username, password });
       console.log(response);
       setError(null);
       navigate('/dashboard');
@@ -23,13 +23,13 @@ const CanvasLoginForm: React.FC = () => {
   return (
     <form onSubmit={handleSubmit}>
       <div className="form-group">
-        <label htmlFor="email">Email</label>
+        <label htmlFor="username">Username</label>
         <input
-          type="email"
+          type="username"
           className="form-control"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          id="username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           required
         />
       </div>

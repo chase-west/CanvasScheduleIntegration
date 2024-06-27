@@ -21,7 +21,7 @@ export const fetchGoogleToken = async (code: string) => {
 };
 
 // Function to login to Canvas
-export const loginToCanvas = async (credentials: { email: string; password: string }) => {
+export const loginToCanvas = async (credentials: { username: string; password: string }) => {
   try {
     const response = await api.post('/api/login/canvas', credentials);
     return response.data; // Ensure response.data is defined before accessing it

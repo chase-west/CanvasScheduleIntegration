@@ -79,9 +79,9 @@ def init_routes(app):
     @app.route('/api/login/canvas', methods=['POST'])
     def login_to_canvas():
         data = request.get_json()
-        email = data.get('email')
+        username = data.get('username')
         password = data.get('password')
-        if email == 'demo@example.com' and password == 'password':
+        if username == 'demo' and password == 'password':
             return jsonify({'message': 'Login successful'}), 200
         else:
             return jsonify({'message': 'Invalid credentials'}), 401

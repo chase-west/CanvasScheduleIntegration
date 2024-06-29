@@ -5,7 +5,8 @@ import os
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
-CORS(app)
+
+CORS(app, supports_credentials=True, origins=["https://localhost:5173"])
 init_routes(app)
 
 if __name__ == "__main__":

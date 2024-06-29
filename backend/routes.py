@@ -75,6 +75,20 @@ def init_routes(app):
                 return jsonify({'error': 'User not found'}), 404
         except Exception as e:
             return jsonify({'Error during login': str(e)}), 500
+        
+    @app.route('/api/logout', methods=['POST'])
+    def logout():
+        session.pop('user_id', None)
+        return jsonify({'message': 'Logged out successfully'}), 200
+    
+    @app.route('/api/userState', methods=['GET'])
+    def check_user_state():
+        user_id = session.get('user_id')
+        print(user_id)
+        if user_id:
+            return jsonify({'isAuthenticated': True, 'userId': user_id}), 200
+        else:
+            return jsonify({'isAuthenticated': False}), 200
 
     @app.route('/api/login/canvas', methods=['POST'])
     def login_to_canvas():

@@ -1,36 +1,79 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { login as apiLogin, signUp as apiSignUp, loginToCanvas as apiLoginToCanvas, checkUserState, logout as apiLogout } from '../api/api'; 
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (token: string) => void;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  loginToCanvas: (credentials: { username: string; password: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    // Check local storage for the token on initial load
-    const token = localStorage.getItem('authToken');
-    return !!token;
-  });
-
-  const login = (token: string) => {
-    setIsAuthenticated(true);
-    localStorage.setItem('authToken', token);
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('authToken');
-  };
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true); // Loading state
 
   useEffect(() => {
-    // Optionally, you can implement token verification logic here
+    const fetchUserState = async () => {
+      try {
+        const response = await checkUserState();
+        setIsAuthenticated(response.isAuthenticated);
+      } catch (error) {
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false); // Set loading to false once authentication check is complete
+      }
+    };
+
+    fetchUserState();
   }, []);
 
+  const login = async (email: string, password: string) => {
+    try {
+      await apiLogin({ email, password });
+      const response = await checkUserState();
+      setIsAuthenticated(response.isAuthenticated); // Update isAuthenticated based on backend response
+    } catch (error) {
+      console.error("Login failed:", error);
+      setIsAuthenticated(false); // Ensure isAuthenticated is false on login failure
+      throw error; // Rethrow the error to handle in the login component
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await apiLogout(); // Backend logout
+      setIsAuthenticated(false); // Update isAuthenticated on successful logout
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const signUp = async (email: string, password: string) => {
+    try {
+      await apiSignUp({ email, password });
+    } catch (error) {
+      console.error("Sign up failed:", error);
+    }
+  };
+
+  const loginToCanvas = async (credentials: { username: string; password: string }) => {
+    try {
+      await apiLoginToCanvas(credentials);
+    } catch (error) {
+      console.error("Canvas login failed:", error);
+    }
+  };
+
+  // Show loading indicator or login page based on authentication status
+  if (loading) {
+    return <div>Loading...</div>; // Optional: Replace with a loading spinner or indicator
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, signUp, loginToCanvas }}>
       {children}
     </AuthContext.Provider>
   );
@@ -43,3 +86,4 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
+  

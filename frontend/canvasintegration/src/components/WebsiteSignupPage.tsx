@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUp } from '../api/api'; 
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { useAuth } from '../context/AuthContext';
 
-const WebsiteSignupPage = () => {
+const WebsiteSignupPage: React.FC = () => {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupError, setSignupError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSignup = async (e : any) => {
+  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
@@ -21,13 +22,12 @@ const WebsiteSignupPage = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await signUp({ email, password });
-      console.log(response);
+      await signUp(email, password);
       setSignupError('');
       setIsSubmitting(false);
       // Redirect to the home page or any other page after successful signup
       navigate('/dashboard');
-    } catch (error : any) {
+    } catch (error: any) {
       console.error('Error signing up:', error);
       setSignupError(error.error || 'Error signing up. Please try again.');
       setIsSubmitting(false);

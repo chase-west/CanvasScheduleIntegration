@@ -1,11 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
-import { useAuth } from '../context/AuthContext';
 
 const baseURL = 'https://localhost:5000';
 
 // Create an Axios instance with a base URL
 const api: AxiosInstance = axios.create({
   baseURL,
+  withCredentials: true,
 });
 
 // Function to fetch Microsoft token
@@ -73,4 +73,20 @@ export const login = async (credentials: { email: string; password: any }) => {
       throw 'Error setting up the request.';
     }
   }
+};
+
+export const logout = async () => {
+  try {
+    await api.post('/api/logout');
+    // Assuming successful logout, update local state or context
+    return true;
+  } catch (error) {
+    console.error('Logout failed:', error);
+    throw error;
+  }
+};
+
+export const checkUserState = async () => {
+  const response = await api.get('/api/userState');
+  return response.data;
 };

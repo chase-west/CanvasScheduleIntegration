@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api/api';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { useAuth } from '../context/AuthContext';
 
 const WebsiteLoginPage: React.FC = () => {
     const navigate = useNavigate();
-    const { login: authLogin } = useAuth();
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loginError, setLoginError] = useState('');
@@ -15,8 +14,7 @@ const WebsiteLoginPage: React.FC = () => {
         e.preventDefault();
 
         try {
-            const response = await login({ email, password });
-            authLogin(response.token); 
+            await login(email, password);
             setLoginError('');
             navigate('/dashboard');
         } catch (error) {

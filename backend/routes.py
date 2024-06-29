@@ -6,6 +6,7 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 import requests
 from flask import jsonify
+from CanvasInfo import *
 
 load_dotenv()
 
@@ -95,6 +96,12 @@ def init_routes(app):
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
+        loginToCanvas(username, password)
+        student_classes = get_classes()
+        print_user_classes(student_classes)
+
+
+
         if username == 'demo' and password == 'password':
             return jsonify({'message': 'Login successful'}), 200
         else:

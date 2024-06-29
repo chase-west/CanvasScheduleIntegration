@@ -5,15 +5,10 @@ from dotenv import load_dotenv
 import json
 from StudentClass import StudentClass, Assignment
 
-# Load environment variables
-load_dotenv()
-username = os.getenv("USERNAME_CANVAS")
-password = os.getenv("PASSWORD_CANVAS")
-
 # Global session object
 session = requests.Session()
 
-def login_to_canvas():
+def loginToCanvas(username, password):
     global session
     login_url = "https://tmcc.instructure.com/login/canvas"
     
@@ -105,7 +100,12 @@ def get_assignments(student_class, class_url):
 
 def main():
     try:
-        login_to_canvas()
+        # Load environment variables
+        load_dotenv()
+        username = os.getenv("USERNAME_CANVAS")
+        password = os.getenv("PASSWORD_CANVAS")
+
+        loginToCanvas()
         student_classes = get_classes()
         print_user_classes(student_classes)
     except Exception as e:

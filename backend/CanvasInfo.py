@@ -1,20 +1,21 @@
 import os
-import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import json
+from requests_html import HTMLSession
 from StudentClass import StudentClass, Assignment
 
 # Global session object
-session = requests.Session()
+web_session = HTMLSession()
+
 
 def loginToCanvas(username, password):
-    global session
+    global web_session
     login_url = "https://tmcc.instructure.com/login/canvas"
     
     try:
         # Fetch the login page to get any hidden fields
-        login_page = session.get(login_url)
+        login_page = web_session.get(login_url)
         login_page.raise_for_status()  # Raise exception for bad responses
         soup = BeautifulSoup(login_page.text, 'html.parser')
         
@@ -34,7 +35,7 @@ def loginToCanvas(username, password):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
         }
         
-        response = session.post(login_url, data=payload, headers=headers)
+        response = web_session.post(login_url, data=payload, headers=headers)
         response.raise_for_status()  # Raise exception for bad responses
         
         if "Invalid" in response.text or response.url == login_url:
@@ -47,11 +48,11 @@ def loginToCanvas(username, password):
         raise  # Rethrow exception to terminate execution or handle as needed
 
 def get_classes():
-    global session
+    global web_session
     dashboard_url = "https://tmcc.instructure.com/api/v1/users/self/favorites/courses"
     
     try:
-        response = session.get(dashboard_url)
+        response = web_session.get(dashboard_url)
         response.raise_for_status()  # Raise exception for bad responses
         courses_data = json.loads(response.text)
         
@@ -77,11 +78,11 @@ def get_classes():
         raise  # Rethrow exception to terminate execution or handle as needed
 
 def get_assignments(student_class, class_url):
-    global session
+    global web_session
     assignments_url = class_url + '/assignments?per_page=500'
     
     try:
-        response = session.get(assignments_url)
+        response = web_session.get(assignments_url)
         response.raise_for_status()  # Raise exception for bad responses
         
         assignments_data = json.loads(response.text)

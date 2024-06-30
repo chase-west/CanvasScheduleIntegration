@@ -101,7 +101,6 @@ def init_routes(app):
         print_user_classes(student_classes)
 
 
-
         if username == 'demo' and password == 'password':
             return jsonify({'message': 'Login successful'}), 200
         else:

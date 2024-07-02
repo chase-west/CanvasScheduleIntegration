@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, hasLoggedIntoCanvas } = useAuth();
 
   const handleCanvasLoginClick = () => {
     navigate('/login-canvas');
@@ -24,7 +24,11 @@ const Dashboard: React.FC = () => {
       <main className="dashboard-main">
         <h2>Welcome to the Dashboard</h2>
         <button onClick={handleLogout} className="btn btn-danger">Logout</button>
-        <button type="button" className="btn btn-secondary" onClick={handleCanvasLoginClick}>Log in to canvas</button>
+        {!hasLoggedIntoCanvas && (
+          <button type="button" className="btn btn-secondary" onClick={handleCanvasLoginClick}>
+            Log in to Canvas
+          </button>
+        )}
         <OAuthLoginButtons />
       </main>
     </div>

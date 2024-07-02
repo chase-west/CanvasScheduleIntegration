@@ -3,6 +3,7 @@ import { login as apiLogin, signUp as apiSignUp, loginToCanvas as apiLoginToCanv
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  hasLoggedIntoCanvas: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -13,6 +14,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [hasLoggedIntoCanvas, setHasLoggedIntoCanvas] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true); // Loading state
 
   useEffect(() => {
@@ -20,8 +22,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const response = await checkUserState();
         setIsAuthenticated(response.isAuthenticated);
+        setHasLoggedIntoCanvas(response.hasLoggedIntoCanvas); 
       } catch (error) {
         setIsAuthenticated(false);
+        setHasLoggedIntoCanvas(false);
       } finally {
         setLoading(false); // Set loading to false once authentication check is complete
       }
@@ -73,7 +77,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, signUp, loginToCanvas }}>
+    <AuthContext.Provider value={{ isAuthenticated, hasLoggedIntoCanvas, login, logout, signUp, loginToCanvas }}>
       {children}
     </AuthContext.Provider>
   );

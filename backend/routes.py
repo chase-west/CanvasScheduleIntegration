@@ -87,7 +87,15 @@ def init_routes(app):
         user_id = session.get('user_id')
         print(user_id)
         if user_id:
-            return jsonify({'isAuthenticated': True}), 200
+            # Check if the user has logged in to Canvas
+            canvas_query = supabase.table('canvas_credentials').select('user_id').eq('user_id', user_id).execute()
+            canvas_logged_in = len(canvas_query.data) > 0
+
+            if canvas_logged_in:
+                return jsonify({'isAuthenticated': True, 'hasLoggedIntoCanvas': True}), 200
+            else:
+                return jsonify({'isAuthenticated': True, 'hasLoggedIntoCanvas': False}), 200
+            
         else:
             return jsonify({'isAuthenticated': False}), 200
 

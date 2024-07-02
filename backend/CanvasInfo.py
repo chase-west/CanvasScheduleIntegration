@@ -145,7 +145,8 @@ def add_classes_and_assignments_to_db(user_id, student_classes):
                         'class_id': actual_class_id,  # Use actual_class_id here
                         'assignment_name': assignment.name,
                         'due_date': assignment.due_date,
-                        'description': assignment.description
+                        'description': assignment.description,
+                        'user_id' : user_id
                     })
                 else:
                     print(f"{assignment.name} already in assignments. Not inserting. ")
@@ -164,6 +165,26 @@ def add_classes_and_assignments_to_db(user_id, student_classes):
         print(f"Error adding classes and assignments to database: {str(e)}")
         raise  # Rethrow exception to terminate execution or handle as needed
 
+def get_assignments_for_user(user_id):
+    try:
+        # Fetch assignments from the database for the given user_id
+        assignments_data = supabase.table('assignments').select('*').eq('user_id', user_id).execute()
+
+        assignments = []
+        for assignment in assignments_data.data:
+            assignments.append({
+                'class_id': assignment['class_id'],
+                'assignment_name': assignment['assignment_name'],
+                'due_date': assignment['due_date'],
+                'description': assignment['description']
+            })
+
+        return assignments
+
+    except Exception as e:
+        print(f"Error fetching assignments for user_id {user_id}: {str(e)}")
+        return None  # Handle the error as needed
+
 def main():
     try:
         # Load environment variables
@@ -171,11 +192,12 @@ def main():
         username = os.getenv("USERNAME_CANVAS")
         password = os.getenv("PASSWORD_CANVAS")
         user_id = os.getenv("USER_ID")
-    
-        loginToCanvas(username, password)
-        student_classes = scrape_classes()
-        add_classes_and_assignments_to_db(user_id, student_classes)
-      #  print_user_classes(student_classes)
+
+        #get_assignments_for_user(user_id)
+        #loginToCanvas(username, password)
+        #student_classes = scrape_classes()
+       #add_classes_and_assignments_to_db(user_id, student_classes)
+      #print_user_classes(student_classes)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         # Handle the error 

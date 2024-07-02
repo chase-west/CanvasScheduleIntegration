@@ -96,15 +96,12 @@ def init_routes(app):
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
-        loginToCanvas(username, password)
-        student_classes = get_classes()
-        print_user_classes(student_classes)
-
-
-        if username == 'demo' and password == 'password':
+        try:
+            loginToCanvas(username, password)
             return jsonify({'message': 'Login successful'}), 200
-        else:
-            return jsonify({'message': 'Invalid credentials'}), 401
+        except:
+             return jsonify({'message': 'Invalid credentials'}), 401
+               
         
     @app.route("/login/microsoft")
     def login_microsoft():

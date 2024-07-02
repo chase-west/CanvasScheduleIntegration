@@ -47,7 +47,7 @@ def loginToCanvas(username, password):
         print(f"Error during login: {str(e)}")
         raise  # Rethrow exception to terminate execution or handle as needed
 
-def get_classes():
+def scrape_classes():
     global web_session
     dashboard_url = "https://tmcc.instructure.com/api/v1/users/self/favorites/courses"
     
@@ -69,7 +69,7 @@ def get_classes():
             student_class = StudentClass(class_name)
             student_classes.append(student_class)
             print(f"Class found: {class_name}")
-            get_assignments(student_class, class_url)
+            scrape_assignments(student_class, class_url)
         
         return student_classes
     
@@ -77,7 +77,7 @@ def get_classes():
         print(f"Error fetching classes: {str(e)}")
         raise  # Rethrow exception to terminate execution or handle as needed
 
-def get_assignments(student_class, class_url):
+def scrape_assignments(student_class, class_url):
     global web_session
     assignments_url = class_url + '/assignments?per_page=500'
     
@@ -106,8 +106,8 @@ def main():
         username = os.getenv("USERNAME_CANVAS")
         password = os.getenv("PASSWORD_CANVAS")
 
-        loginToCanvas()
-        student_classes = get_classes()
+        loginToCanvas(username, password)
+        student_classes = scrape_classes()
         print_user_classes(student_classes)
     except Exception as e:
         print(f"An error occurred: {str(e)}")

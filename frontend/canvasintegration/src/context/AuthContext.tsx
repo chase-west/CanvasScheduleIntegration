@@ -3,6 +3,7 @@ import { login as apiLogin, signUp as apiSignUp, loginToCanvas as apiLoginToCanv
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  loading: boolean;
   hasLoggedIntoCanvas: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -14,20 +15,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [hasLoggedIntoCanvas, setHasLoggedIntoCanvas] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true); // Loading state
+  const [hasLoggedIntoCanvas, setHasLoggedIntoCanvas] = useState<boolean>(false); // Default to false
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchUserState = async () => {
       try {
         const response = await checkUserState();
         setIsAuthenticated(response.isAuthenticated);
-        setHasLoggedIntoCanvas(response.hasLoggedIntoCanvas); 
+        setHasLoggedIntoCanvas(response.hasLoggedIntoCanvas);
       } catch (error) {
         setIsAuthenticated(false);
         setHasLoggedIntoCanvas(false);
       } finally {
-        setLoading(false); // Set loading to false once authentication check is complete
+        setLoading(false);
       }
     };
 
@@ -38,18 +39,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await apiLogin({ email, password });
       const response = await checkUserState();
-      setIsAuthenticated(response.isAuthenticated); // Update isAuthenticated based on backend response
+      setIsAuthenticated(response.isAuthenticated);
+      setHasLoggedIntoCanvas(response.hasLoggedIntoCanvas);
     } catch (error) {
       console.error("Login failed:", error);
-      setIsAuthenticated(false); // Ensure isAuthenticated is false on login failure
-      throw error; // Rethrow the error to handle in the login component
+      setIsAuthenticated(false);
+      setHasLoggedIntoCanvas(false);
+      throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await apiLogout(); // Backend logout
-      setIsAuthenticated(false); // Update isAuthenticated on successful logout
+      await apiLogout();
+      setIsAuthenticated(false);
+      setHasLoggedIntoCanvas(false);
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -77,7 +81,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, hasLoggedIntoCanvas, login, logout, signUp, loginToCanvas }}>
+    <AuthContext.Provider value={{ isAuthenticated, loading, hasLoggedIntoCanvas, login, logout, signUp, loginToCanvas }}>
       {children}
     </AuthContext.Provider>
   );

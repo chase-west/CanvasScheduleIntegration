@@ -109,49 +109,91 @@ def init_routes(app):
             return jsonify({'message': 'Login successful'}), 200
         except:
              return jsonify({'message': 'Invalid credentials'}), 401
-               
-        
+          
     @app.route("/login/microsoft")
     def login_microsoft():
         microsoft = OAuth2Session(microsoft_client_id, redirect_uri=microsoft_redirect_uri, scope=["Tasks.ReadWrite"])
         authorization_url, state = microsoft.authorization_url(microsoft_authorization_base_url)
-        session['oauth_state'] = state
+        session['microsoft_oauth_state'] = state
         return redirect(authorization_url)
 
     @app.route("/callback/microsoft")
     def callback_microsoft():
-        microsoft = OAuth2Session(microsoft_client_id, state=session['oauth_state'], redirect_uri=microsoft_redirect_uri)
+        microsoft = OAuth2Session(microsoft_client_id, state=session.get('microsoft_oauth_state'), redirect_uri=microsoft_redirect_uri)
         token = microsoft.fetch_token(microsoft_token_url, client_secret=microsoft_client_secret, authorization_response=request.url)
         session['oauth_token'] = token
-        return redirect(url_for('home'))
+        return redirect(url_for('push_assignments_to_tasks_microsoft'))
 
     @app.route("/login/google")
     def login_google():
-        google = OAuth2Session(google_client_id, redirect_uri=google_redirect_uri, scope=["https://www.googleapis.com/auth/calendar.readonly"])
+        google = OAuth2Session(google_client_id, redirect_uri=google_redirect_uri, scope=["https://www.googleapis.com/auth/tasks"])
         authorization_url, state = google.authorization_url(google_authorization_base_url, access_type="offline", prompt="consent")
-        session['oauth_state'] = state
+        session['google_oauth_state'] = state
         return redirect(authorization_url)
 
     @app.route("/callback/google")
     def callback_google():
-        google = OAuth2Session(google_client_id, state=session['oauth_state'], redirect_uri=google_redirect_uri)
+        google = OAuth2Session(google_client_id, state=session.get('google_oauth_state'), redirect_uri=google_redirect_uri)
         token = google.fetch_token(google_token_url, client_secret=google_client_secret, authorization_response=request.url)
         session['oauth_token'] = token
-        return redirect(url_for('home'))
+        return redirect(url_for('push_assignments_to_tasks_google'))
+        
+    @app.route('/push_assignments_to_tasks_microsoft', methods=['GET'])
+    def push_assignments_to_tasks_microsoft():
+        try:
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({'error': 'User ID not provided in request body'}), 400
+            
+            assignments = get_assignments_for_user(user_id)
+            if assignments:
+                for assignment in assignments:
+                    assignment_name = assignment['assignment_name']
+                    due_date = assignment['due_date']
 
-    @app.route("/home")
-    def home():
-        token = session.get('oauth_token')
-        if token:
-            list_id = get_todo_list_id(token['access_token'])
-            task_response = create_tasks(token['access_token'], list_id, "test")
-            return render_template_string("""
-                <h1>Home Page</h1>
-                <p>Task Created:</p>
-                <pre>{{ task_response }}</pre>
-            """, task_response=task_response)
-        else:
-            return "Home Page<br>No valid token found."
+                    microsoft_token = session.get('_oauth_token')
+                    if microsoft_token:
+                        try:
+                            list_id = get_todo_list_id(microsoft_token['access_token'])
+                            task_response = create_tasks(microsoft_token['access_token'], list_id, assignment_name, due_date)
+                            print(f"Task created in Microsoft Tasks for assignment {assignment_name}")
+                        except Exception as e:
+                            print(f"Error creating task in Microsoft Tasks: {str(e)}")
+
+                return jsonify({'message': 'Assignments pushed to Microsoft Tasks successfully'}), 200
+
+        except Exception as e:
+            print(f"Error pushing assignments to Microsoft Tasks: {str(e)}")
+            return jsonify({'error': f'Error pushing assignments to Microsoft Tasks: {str(e)}'}), 500
+
+    @app.route('/push_assignments_to_tasks_google', methods=['GET'])
+    def push_assignments_to_tasks_google():
+        try:
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({'error': 'User ID not provided in request body'}), 400
+            
+            assignments = get_assignments_for_user(user_id)
+            if assignments:
+                for assignment in assignments:
+                    assignment_name = assignment['assignment_name']
+                    due_date = assignment['due_date']
+
+                    google_token = session.get('google_oauth_token')
+                    if google_token:
+                        try:
+                            task_response = create_tasks(google_token['access_token'], "primary", assignment_name, due_date)
+                            print(f"Task created in Google Tasks for assignment {assignment_name}")
+                        except Exception as e:
+                            print(f"Error creating task in Google Tasks: {str(e)}")
+
+                return jsonify({'message': 'Assignments pushed to Google Tasks successfully'}), 200
+
+        except Exception as e:
+            print(f"Error pushing assignments to Google Tasks: {str(e)}")
+            return jsonify({'error': f'Error pushing assignments to Google Tasks: {str(e)}'}), 500
+               
+      
 
 def get_todo_list_id(token):
     headers = {
@@ -165,7 +207,7 @@ def get_todo_list_id(token):
     else:
         raise Exception("No To Do lists found")
 
-def create_tasks(token, list_id, title):
+def create_tasks(token, list_id, title, due_date):
     headers = {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
@@ -173,7 +215,7 @@ def create_tasks(token, list_id, title):
     task_data = {
         'title': title,
         'dueDateTime': {
-            'dateTime': '2024-06-30T18:00:00.0000000',
+            'dateTime': due_date.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
             'timeZone': 'UTC'
         },
         'body': {
@@ -181,5 +223,12 @@ def create_tasks(token, list_id, title):
             'contentType': 'text'
         }
     }
-    response = requests.post(f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks', headers=headers, json=task_data)
-    return response.json()
+    
+    try:
+        response = requests.post(f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks', headers=headers, json=task_data)
+        response.raise_for_status()  # Raise an exception for bad response status
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise Exception(f"Error creating task: {e}")
+
+

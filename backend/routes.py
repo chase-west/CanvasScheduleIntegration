@@ -87,7 +87,7 @@ def init_routes(app):
         user_id = session.get('user_id')
         print(user_id)
         if user_id:
-            return jsonify({'isAuthenticated': True, 'userId': user_id}), 200
+            return jsonify({'isAuthenticated': True}), 200
         else:
             return jsonify({'isAuthenticated': False}), 200
 

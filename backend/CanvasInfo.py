@@ -2,8 +2,19 @@ import os
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 import json
+from supabase import create_client, Client
 from requests_html import HTMLSession
 from StudentClass import StudentClass, Assignment
+
+
+# Load environment variables
+load_dotenv()
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
+
+# Initialize Supabase client
+supabase: Client = create_client(url, key)
 
 # Global session object
 web_session = HTMLSession()
@@ -66,7 +77,7 @@ def scrape_classes():
             class_name = course.get('short_name') or course.get('name', 'No Name')
             class_id = course.get('id')
             class_url = f"https://tmcc.instructure.com/api/v1/courses/{class_id}"
-            student_class = StudentClass(class_name)
+            student_class = StudentClass(class_name, class_id)  # Pass class_id to constructor
             student_classes.append(student_class)
             print(f"Class found: {class_name}")
             scrape_assignments(student_class, class_url)
@@ -90,13 +101,67 @@ def scrape_assignments(student_class, class_url):
         for assignment_data in assignments_data:
             assignment_name = assignment_data.get('name', 'No Title')
             due_date = assignment_data.get('due_at', 'No Due Date')
-            
-            assignment = Assignment(name=assignment_name, due_date=due_date)
+            description = assignment_data.get('description', '')
+
+            assignment = Assignment(name=assignment_name, due_date=due_date, description=description)
             student_class.assignments.append(assignment)
             print(f"Assignment found: {assignment_name}, Due: {due_date}")
     
     except Exception as e:
         print(f"Error fetching assignments: {str(e)}")
+        raise  # Rethrow exception to terminate execution or handle as needed
+
+
+def add_classes_and_assignments_to_db(user_id, student_classes):
+    try:
+        for student_class in student_classes:
+            # Check if the class already exists for the user_id
+            existing_class = supabase.table('classes').select('id', 'class_id').eq('class_id', student_class.class_id).eq('user_id', user_id).execute()
+            
+            if existing_class.data:
+                print(f"Class with class_id {student_class.class_id} already exists for user_id {user_id}. Using existing class.")
+                class_db_id = existing_class.data[0]['id']
+                actual_class_id = existing_class.data[0]['class_id']
+            else:
+                # Insert class into database
+                class_insert = supabase.table('classes').insert({
+                    'class_name': student_class.class_name,
+                    'class_id': student_class.class_id,
+                    'user_id': user_id
+                }).execute()
+                class_db_id = class_insert.data[0]['id']
+                actual_class_id = student_class.class_id
+                print(f"Class {student_class.class_name} added to database.")
+
+            # Retrieve existing assignments for the class
+            existing_assignments = supabase.table('assignments').select('assignment_name').eq('class_id', student_class.class_id).execute()
+            existing_assignment_names = {assignment['assignment_name'] for assignment in existing_assignments.data}
+            
+            # Prepare batch insert for assignments
+            assignments_to_insert = []
+            for assignment in student_class.assignments:
+                if assignment.name not in existing_assignment_names:
+                    assignments_to_insert.append({
+                        'class_id': actual_class_id,  # Use actual_class_id here
+                        'assignment_name': assignment.name,
+                        'due_date': assignment.due_date,
+                        'description': assignment.description
+                    })
+                else:
+                    print(f"{assignment.name} already in assignments. Not inserting. ")
+            
+            # Insert assignments in batch
+            if assignments_to_insert:
+                try:
+                    insert_result = supabase.table('assignments').insert(assignments_to_insert).execute()
+                    print(f"Assignments added for class {student_class.class_name}.")
+                except Exception as e:
+                    print("Error inserting assignments")
+            else:
+                print(f"No new assignments to add for class {student_class.class_name}.")
+    
+    except Exception as e:
+        print(f"Error adding classes and assignments to database: {str(e)}")
         raise  # Rethrow exception to terminate execution or handle as needed
 
 def main():
@@ -105,10 +170,12 @@ def main():
         load_dotenv()
         username = os.getenv("USERNAME_CANVAS")
         password = os.getenv("PASSWORD_CANVAS")
-
+        user_id = os.getenv("USER_ID")
+    
         loginToCanvas(username, password)
         student_classes = scrape_classes()
-        print_user_classes(student_classes)
+        add_classes_and_assignments_to_db(user_id, student_classes)
+      #  print_user_classes(student_classes)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         # Handle the error 

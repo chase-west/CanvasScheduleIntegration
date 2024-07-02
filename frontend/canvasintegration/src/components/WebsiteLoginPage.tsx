@@ -33,11 +33,13 @@ const WebsiteLoginPage: React.FC = () => {
                         <div className="form-group">
                             <label htmlFor="email">Email</label>
                             <input
-                                type="text"
+                                type="email"
                                 className="form-control"
                                 id="email"
+                                name="email"
                                 placeholder="Enter Email"
                                 value={email}
+                                autoComplete="email"
                                 onChange={(e) => setEmail(e.target.value)}
                                 required
                             />
@@ -48,8 +50,10 @@ const WebsiteLoginPage: React.FC = () => {
                                 type="password"
                                 className="form-control"
                                 id="password"
+                                name="password"
                                 placeholder="Enter password"
                                 value={password}
+                                autoComplete="current-password"
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />

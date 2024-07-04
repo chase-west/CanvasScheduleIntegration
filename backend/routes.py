@@ -197,7 +197,6 @@ def init_routes(app):
                 return jsonify({'error': 'Microsoft OAuth token not found'}), 400
 
             list_id, existing_task_names = get_todo_list_id(microsoft_token['access_token'])
-
             assignments = get_assignments_for_user(user_id)
             if not assignments:
                 return jsonify({'message': 'No assignments found for user'}), 200
@@ -291,9 +290,15 @@ def get_todo_list_id(token):
         else:
             raise Exception("Failed to create or find the 'Canvas Assignments' To Do list")
     
-    # Fetch existing tasks in the list
-    tasks_response = requests.get(f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks', headers=headers)
-    tasks = tasks_response.json().get('value', [])
+    # Fetch existing tasks in the list, handling pagination
+    tasks_url = f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks'
+    tasks = []
+    
+    while tasks_url:
+        tasks_response = requests.get(tasks_url, headers=headers)
+        tasks_data = tasks_response.json()
+        tasks.extend(tasks_data.get('value', []))
+        tasks_url = tasks_data.get('@odata.nextLink', None)
     
     # Extract existing task names
     existing_task_names = [task.get('title') for task in tasks]

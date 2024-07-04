@@ -5,7 +5,7 @@ import json
 from supabase import create_client, Client
 from requests_html import HTMLSession
 from StudentClass import StudentClass, Assignment
-
+from datetime import datetime
 
 # Load environment variables
 load_dotenv()
@@ -90,7 +90,7 @@ def scrape_classes():
 
 def scrape_assignments(student_class, class_url):
     global web_session
-    assignments_url = class_url + '/assignments?per_page=500'
+    assignments_url = f"{class_url}/assignments?per_page=500"
     
     try:
         response = web_session.get(assignments_url)
@@ -100,9 +100,15 @@ def scrape_assignments(student_class, class_url):
         
         for assignment_data in assignments_data:
             assignment_name = assignment_data.get('name', 'No Title')
-            due_date = assignment_data.get('due_at', 'No Due Date')
+            due_date = assignment_data.get('due_at', None)
             description = assignment_data.get('description', '')
 
+            # Check if due date is in the past
+            if due_date and datetime.strptime(due_date, '%Y-%m-%dT%H:%M:%SZ') < datetime.now():
+                print(f"Skipping assignment '{assignment_name}' due to past due date. Due date: {due_date}")
+                continue
+
+            # Create Assignment object and append to student_class
             assignment = Assignment(name=assignment_name, due_date=due_date, description=description)
             student_class.assignments.append(assignment)
             print(f"Assignment found: {assignment_name}, Due: {due_date}")
@@ -194,9 +200,9 @@ def main():
         user_id = os.getenv("USER_ID")
 
         #get_assignments_for_user(user_id)
-        #loginToCanvas(username, password)
-        #student_classes = scrape_classes()
-       #add_classes_and_assignments_to_db(user_id, student_classes)
+        loginToCanvas(username, password)
+        student_classes = scrape_classes()
+        add_classes_and_assignments_to_db(user_id, student_classes)
       #print_user_classes(student_classes)
     except Exception as e:
         print(f"An error occurred: {str(e)}")

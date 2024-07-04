@@ -5,14 +5,24 @@ import bcrypt
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import requests
+import time
 from flask import jsonify
 from CanvasInfo import *
+from datetime import datetime
+from cryptography.fernet import Fernet
 
 load_dotenv()
 
 url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_KEY")
 supabase: Client = create_client(url, key)
+
+
+def load_key():
+    return os.getenv("ENCRYPTION_KEY").encode()
+
+encryption_key = load_key()
+fernet = Fernet(encryption_key)
 
 # Environment variables
 microsoft_client_id = os.getenv("MICROSOFT_CLIENT_ID")
@@ -85,7 +95,6 @@ def init_routes(app):
     @app.route('/api/userState', methods=['GET'])
     def check_user_state():
         user_id = session.get('user_id')
-        print(user_id)
         if user_id:
             # Check if the user has logged in to Canvas
             canvas_query = supabase.table('canvas_credentials').select('user_id').eq('user_id', user_id).execute()
@@ -104,14 +113,52 @@ def init_routes(app):
         data = request.get_json()
         username = data.get('username')
         password = data.get('password')
+        user_id = session.get('user_id')
+
         try:
+            # Attempt to log in to Canvas
             loginToCanvas(username, password)
-            return jsonify({'message': 'Login successful'}), 200
-        except:
-             return jsonify({'message': 'Invalid credentials'}), 401
+        except Exception as e:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        else:
+            try:
+        
+                # Encrypt credentials before storing
+                encrypted_username = fernet.encrypt(username.encode()).decode()
+                encrypted_password = fernet.encrypt(password.encode()).decode()
+                
+                # Store credentials in database
+                supabase.table('canvas_credentials').insert({
+                    'user_id': user_id,
+                    'canvas_username': encrypted_username,
+                    'canvas_password': encrypted_password
+                }).execute()
+
+                return jsonify({'message': 'Login successful and credentials stored'}), 200
+            
+            except Exception as e:
+                print(f"Error storing credentials: {str(e)}")
+                return jsonify({'error': 'Error storing credentials'}), 500
           
     @app.route("/login/microsoft")
     def login_microsoft():
+         # Scrape user classes
+        try: 
+            user_id = session.get('user_id')
+            if not user_id:
+                return jsonify({'error': 'No user ID'}), 400
+            
+
+            # Get username and password from database
+            username, password = get_canvas_credentials(user_id)
+
+            loginToCanvas(username, password)
+            student_classes = scrape_classes()
+            add_classes_and_assignments_to_db(user_id, student_classes)
+        except Exception as e:
+            print("Error scrapping classes and assigments. ")
+
         microsoft = OAuth2Session(microsoft_client_id, redirect_uri=microsoft_redirect_uri, scope=["Tasks.ReadWrite"])
         authorization_url, state = microsoft.authorization_url(microsoft_authorization_base_url)
         session['microsoft_oauth_state'] = state
@@ -145,26 +192,47 @@ def init_routes(app):
             if not user_id:
                 return jsonify({'error': 'User ID not provided in request body'}), 400
             
+            microsoft_token = session.get('oauth_token')
+            if not microsoft_token:
+                return jsonify({'error': 'Microsoft OAuth token not found'}), 400
+
+            list_id, existing_task_names = get_todo_list_id(microsoft_token['access_token'])
+
             assignments = get_assignments_for_user(user_id)
-            if assignments:
-                for assignment in assignments:
+            if not assignments:
+                return jsonify({'message': 'No assignments found for user'}), 200
+
+            for assignment in assignments:
+                try:
                     assignment_name = assignment['assignment_name']
-                    due_date = assignment['due_date']
+                    due_date_str = assignment.get('due_date')
 
-                    microsoft_token = session.get('_oauth_token')
-                    if microsoft_token:
-                        try:
-                            list_id = get_todo_list_id(microsoft_token['access_token'])
-                            task_response = create_tasks(microsoft_token['access_token'], list_id, assignment_name, due_date)
-                            print(f"Task created in Microsoft Tasks for assignment {assignment_name}")
-                        except Exception as e:
-                            print(f"Error creating task in Microsoft Tasks: {str(e)}")
+                    if due_date_str:
+                        due_date = datetime.strptime(due_date_str, '%Y-%m-%dT%H:%M:%S')
+                    else:
+                        due_date = None
 
-                return jsonify({'message': 'Assignments pushed to Microsoft Tasks successfully'}), 200
+                    # Check if assignment name already exists in the To Do list
+                    if assignment_name not in existing_task_names:
+                        task_response = create_tasks_microsoft(microsoft_token['access_token'], list_id, assignment_name, due_date)
+                        print(f"Task created in Microsoft Tasks for assignment {assignment_name}")
+                        existing_task_names.append(assignment_name)  # Update the list of existing task names
+
+                except ValueError as ve:
+                    print(f"Due date format error for assignment {assignment_name}: {ve}")
+                    return jsonify({'error': f'Due date format error for assignment {assignment_name}: {ve}'}), 400
+
+                except Exception as e:
+                    print(f"Error creating task in Microsoft Tasks: {str(e)}")
+                    return jsonify({'error': f'Error creating task in Microsoft Tasks: {str(e)}'}), 500
+
+            return jsonify({'message': 'Assignments pushed to Microsoft Tasks successfully'}), 200
 
         except Exception as e:
             print(f"Error pushing assignments to Microsoft Tasks: {str(e)}")
             return jsonify({'error': f'Error pushing assignments to Microsoft Tasks: {str(e)}'}), 500
+
+
 
     @app.route('/push_assignments_to_tasks_google', methods=['GET'])
     def push_assignments_to_tasks_google():
@@ -182,7 +250,7 @@ def init_routes(app):
                     google_token = session.get('google_oauth_token')
                     if google_token:
                         try:
-                            task_response = create_tasks(google_token['access_token'], "primary", assignment_name, due_date)
+                         #   task_response = create_tasks(google_token['access_token'], "primary", assignment_name, due_date)
                             print(f"Task created in Google Tasks for assignment {assignment_name}")
                         except Exception as e:
                             print(f"Error creating task in Google Tasks: {str(e)}")
@@ -200,35 +268,95 @@ def get_todo_list_id(token):
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
+    
+    # First, try to find the list by display name
     response = requests.get('https://graph.microsoft.com/v1.0/me/todo/lists', headers=headers)
     lists = response.json().get('value', [])
-    if lists:
-        return lists[0]['id']  # Use the ID of the first To Do list
-    else:
-        raise Exception("No To Do lists found")
-
-def create_tasks(token, list_id, title, due_date):
+    
+    list_id = None
+    for todo_list in lists:
+        if todo_list.get('displayName') == 'Canvas Assignments':
+            list_id = todo_list['id']
+            break
+    
+    if not list_id:
+        # Create the list if it doesn't exist
+        default_list_data = {
+            'displayName': 'Canvas Assignments'
+        }
+        create_list_response = requests.post('https://graph.microsoft.com/v1.0/me/todo/lists', headers=headers, json=default_list_data)
+        
+        if create_list_response.status_code == 201:
+            list_id = create_list_response.json().get('id')
+        else:
+            raise Exception("Failed to create or find the 'Canvas Assignments' To Do list")
+    
+    # Fetch existing tasks in the list
+    tasks_response = requests.get(f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks', headers=headers)
+    tasks = tasks_response.json().get('value', [])
+    
+    # Extract existing task names
+    existing_task_names = [task.get('title') for task in tasks]
+    
+    return list_id, existing_task_names
+        
+def create_tasks_microsoft(token, list_id, title, due_date):
     headers = {
         'Authorization': f'Bearer {token}',
         'Content-Type': 'application/json'
     }
+    
     task_data = {
         'title': title,
-        'dueDateTime': {
-            'dateTime': due_date.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
-            'timeZone': 'UTC'
-        },
         'body': {
             'content': 'This is the body of the task.',
             'contentType': 'text'
         }
     }
     
+    if due_date:
+        task_data['dueDateTime'] = {
+            'dateTime': due_date.strftime('%Y-%m-%dT%H:%M:%S.0000000'),
+            'timeZone': 'UTC'
+        }
+    
+    retry_count = 3
+    retry_delay = 5  # seconds
+
+    for attempt in range(retry_count):
+        try:
+            response = requests.post(f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks', headers=headers, json=task_data)
+            response.raise_for_status()  # Raise an exception for bad response status
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            if attempt < retry_count - 1:
+                print(f"Error creating task: {e}. Retrying after {retry_delay} seconds.")
+                time.sleep(retry_delay)
+            else:
+                raise Exception(f"Error creating task: {e}. Maximum retries exceeded.")
+
+    return None
+
+def get_canvas_credentials(user_id):
     try:
-        response = requests.post(f'https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks', headers=headers, json=task_data)
-        response.raise_for_status()  # Raise an exception for bad response status
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        raise Exception(f"Error creating task: {e}")
+        # Retrieve encrypted credentials from the database
+        credentials = supabase.table('canvas_credentials').select('canvas_username', 'canvas_password').eq('user_id', user_id).execute()
+        
+        if len(credentials.data) > 0:
+            encrypted_username = credentials.data[0]['canvas_username']
+            encrypted_password = credentials.data[0]['canvas_password']
+
+            # Decrypt username and password
+            decrypted_username = fernet.decrypt(encrypted_username.encode()).decode()
+            decrypted_password = fernet.decrypt(encrypted_password.encode()).decode()
+
+            return decrypted_username, decrypted_password
+        else:
+            return None, None  
+
+    except Exception as e:
+        print(f"Error retrieving credentials: {str(e)}")
+        return None, None  
+
 
 

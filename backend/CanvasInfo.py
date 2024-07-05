@@ -152,7 +152,8 @@ def add_classes_and_assignments_to_db(user_id, student_classes):
                         'assignment_name': assignment.name,
                         'due_date': assignment.due_date,
                         'description': assignment.description,
-                        'user_id' : user_id
+                        'user_id' : user_id,
+                        'class_name' : student_class.class_name
                     })
                 else:
                     print(f"{assignment.name} already in assignments. Not inserting. ")
@@ -182,7 +183,8 @@ def get_assignments_for_user(user_id):
                 'class_id': assignment['class_id'],
                 'assignment_name': assignment['assignment_name'],
                 'due_date': assignment['due_date'],
-                'description': assignment['description']
+                'description': assignment['description'],
+                'class_name' : assignment['class_name']
             })
 
         return assignments

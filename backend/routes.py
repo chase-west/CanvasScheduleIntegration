@@ -203,7 +203,7 @@ def init_routes(app):
 
             for assignment in assignments:
                 try:
-                    assignment_name = assignment['assignment_name']
+                    assignment_name = assignment['assignment_name'] + " Class: " + assignment['class_name']
                     due_date_str = assignment.get('due_date')
 
                     if due_date_str:

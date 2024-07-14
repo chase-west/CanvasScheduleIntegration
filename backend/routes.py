@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import requests
 import time
 from flask import jsonify
-from CanvasInfo import *
+from CanvasScraper import *
 from datetime import datetime
 from cryptography.fernet import Fernet
 
